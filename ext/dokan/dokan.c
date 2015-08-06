@@ -1,5 +1,5 @@
 #include <ruby.h>
-
+#include "dokan.h"
 
 VALUE rb_cDokan = Qnil;
 
@@ -18,6 +18,72 @@ VALUE rb_dokan_init(VALUE self)
 
 VALUE rb_dokan_run(VALUE self)
 {
+    int res;
+    PDOKAN_OPTIONS dk_opts;
+    PDOKAN_OPERATIONS dk_ops;
+    VALUE rb_mp;
+    int rb_mp_len;
+    LPWSTR wcs_mp;
+
+    rb_mp = rb_iv_get(self, "@mount_point");
+
+    Check_Type(rb_mp, T_STRING);
+    rb_mp_len = RSTRING_LEN(rb_mp);
+
+    wcs_mp = ALLOC_N(wchar_t, rb_mp_len+1);
+
+    if (MultiByteToWideChar(CP_THREAD_ACP, 0, StringValueCStr(rb_mp), rb_mp_len, wcs_mp, rb_mp_len+1) != rb_mp_len) {
+        xfree(wcs_mp);
+        rb_raise(rb_eSystemCallError, "MultiByteToWideChar failed");
+    }
+
+    wcs_mp[rb_mp_len] = L'\0';
+
+    dk_opts = ALLOC(DOKAN_OPTIONS);
+
+    dk_opts->Version = DOKAN_VERSION;
+    dk_opts->ThreadCount = 1;
+    dk_opts->Options = 0;
+    dk_opts->GlobalContext = 1000;
+    dk_opts->MountPoint = wcs_mp;
+
+    dk_ops = ALLOC(DOKAN_OPERATIONS);
+
+    dk_ops->CreateFile           = NULL;
+    dk_ops->OpenDirectory        = NULL;
+    dk_ops->CreateDirectory      = NULL;
+    dk_ops->Cleanup              = NULL;
+    dk_ops->CloseFile            = NULL;
+    dk_ops->ReadFile             = NULL;
+    dk_ops->WriteFile            = NULL;
+    dk_ops->FlushFileBuffers     = NULL;
+    dk_ops->GetFileInformation   = NULL;
+    dk_ops->FindFiles            = NULL;
+    dk_ops->FindFilesWithPattern = NULL;
+    dk_ops->SetFileAttributes    = NULL;
+    dk_ops->SetFileTime          = NULL;
+    dk_ops->DeleteFile           = NULL;
+    dk_ops->DeleteDirectory      = NULL;
+    dk_ops->MoveFile             = NULL;
+    dk_ops->SetEndOfFile         = NULL;
+    dk_ops->SetAllocationSize    = NULL;
+    dk_ops->LockFile             = NULL;
+    dk_ops->UnlockFile           = NULL;
+    dk_ops->GetDiskFreeSpace     = NULL;
+    dk_ops->GetVolumeInformation = NULL;
+    dk_ops->Unmount              = NULL;
+    dk_ops->GetFileSecurity      = NULL;
+    dk_ops->SetFileSecurity      = NULL;
+
+    res = DokanMain(dk_opts, dk_ops);
+
+    if (res != DOKAN_SUCCESS) {
+        xfree(dk_opts);
+        xfree(dk_ops);
+        xfree(wcs_mp);
+        return INT2NUM(res);
+    }
+
     return Qnil;
 }
 
