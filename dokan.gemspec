@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.authors     = ["A. Levenkov"]
   s.email       = 'artem@levenkov.org'
   s.files       = Dir["lib/**/*.rb"] + Dir["lib/**/*.so"]
-  s.extensions  = %w[ext/dokan/extconf.rb]
+  s.extensions  = [ 'ext/dokan/extconf.rb' ]
   s.homepage    =
     'http://github.com/telum/ruby-dokan/'
   s.license       = 'MIT'
