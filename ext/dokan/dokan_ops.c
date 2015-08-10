@@ -1,6 +1,77 @@
 #include "dokan_ops.h"
-#include "dokan_context.h"
+#include "dokan.h"
+#include "ruby.h"
 #include <stdio.h>
+
+
+typedef enum {
+  DF_NOP,
+  DF_CREATEFILE,
+  DF_OPENDIRECTORY,
+  DF_CREATEDIRECTORY,
+  DF_CLEANUP,
+  DF_CLOSEFILE,
+  DF_READFILE,
+  DF_WRITEFILE,
+  DF_FLUSHFILEBUFFERS,
+  DF_GETFILEINFORMATION,
+  DF_FINDFILES,
+  DF_FINDFILESWITHPATTERN,
+  DF_SETFILEATTRIBUTES,
+  DF_SETFILETIME,
+  DF_DELETEFILE,
+  DF_DELETEDIRECTORY,
+  DF_MOVEFILE,
+  DF_SETENDOFFILE,
+  DF_SETALLOCATIONSIZE,
+  DF_LOCKFILE,
+  DF_UNLOCKFILE,
+  DF_GETDISKFREESPACE,
+  DF_GETVOLUMEINFORMATION,
+  DF_UNMOUNT,
+  DF_GETFILESECURITY,
+  DF_SETFILESECURITY
+} DokanFunc;
+
+#define SB_ARGS_MAX_COUNT 8
+
+typedef struct
+{
+  DokanFunc func;
+  void* argv[SB_ARGS_MAX_COUNT];
+  int res;
+  HANDLE dispatchEvent;
+  HANDLE dispatchedEvent;
+} DokanRubySandbox;
+
+
+static DokanRubySandbox drs;
+
+
+BOOL RubyDokan_init(void)
+{
+    drs.dispatchEvent = CreateEvent(NULL, FALSE, FALSE, "DokanDispatchEvent");
+
+    if (drs.dispatchEvent == NULL) {
+        return FALSE;
+    }
+
+    drs.dispatchedEvent = CreateEvent(NULL, FALSE, FALSE, "DokanDispatchedEvent");
+
+    if (drs.dispatchedEvent == NULL) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
+static void RubyDokan_DispatchAndWait(void)
+{
+    SetEvent(drs.dispatchEvent);
+
+    WaitForSingleObject(drs.dispatchedEvent, INFINITE);
+}
 
 
 int DOKAN_CALLBACK RubyDokan_CreateFile (
@@ -11,29 +82,49 @@ int DOKAN_CALLBACK RubyDokan_CreateFile (
 	DWORD            FlagsAndAttributes,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s ", __func__);
-    wprintf(FileName);
-    puts("\n");
+    drs.func = DF_CREATEFILE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)DesiredAccess;
+    drs.argv[2] = (void*)ShareMode;
+    drs.argv[3] = (void*)CreationDisposition;
+    drs.argv[4] = (void*)FlagsAndAttributes;
+    drs.argv[5] = (void*)FileInfo;
 
-    return 0;
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 int DOKAN_CALLBACK RubyDokan_OpenDirectory (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s ", __func__);
-    wprintf(FileName);
-    puts("\n");
-    return 0;
+    drs.func = DF_OPENDIRECTORY;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 int DOKAN_CALLBACK RubyDokan_CreateDirectory (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_CREATEDIRECTORY;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 // When FileInfo->DeleteOnClose is true, you must delete the file in Cleanup.
@@ -41,16 +132,30 @@ int DOKAN_CALLBACK RubyDokan_Cleanup (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_CLEANUP;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 int DOKAN_CALLBACK RubyDokan_CloseFile (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_CLOSEFILE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 #define FILE_SIZE 128
@@ -63,18 +168,19 @@ int DOKAN_CALLBACK RubyDokan_ReadFile (
 	LONGLONG         Offset,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    VALUE self;
+    drs.func = DF_READFILE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)Buffer;
+    drs.argv[2] = (void*)NumberOfBytesToRead;
+    drs.argv[3] = (void*)NumberOfBytesRead;
+    drs.argv[4] = (void*)&Offset;
+    drs.argv[5] = (void*)FileInfo;
 
-    printf("%s (%d, %d)\n", __func__, (int)Offset, (int)NumberOfBytesToRead);
+    drs.res = 0;
 
-    self = dokan_context_get(FileInfo->Context);
+    RubyDokan_DispatchAndWait();
 
-    if (rb_funcall(self, rb_intern("respond_to?"), 1, rb_intern("read")) == Qtrue) {
-        rb_funcall(self, rb_intern("read"), 0);
-        return 0;
-    }
-
-    return ERROR_NOT_SUPPORTED;
+    return drs.res;
 }
 
 
@@ -86,8 +192,19 @@ int DOKAN_CALLBACK RubyDokan_WriteFile (
 	LONGLONG         Offset,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_WRITEFILE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)Buffer;
+    drs.argv[2] = (void*)NumberOfBytesToWrite;
+    drs.argv[3] = (void*)NumberOfBytesWritten;
+    drs.argv[4] = (void*)&Offset;
+    drs.argv[5] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -95,8 +212,15 @@ int DOKAN_CALLBACK RubyDokan_FlushFileBuffers (
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_FLUSHFILEBUFFERS;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -105,15 +229,16 @@ int DOKAN_CALLBACK RubyDokan_GetFileInformation (
 	LPBY_HANDLE_FILE_INFORMATION HandleFileInfo,
 	PDOKAN_FILE_INFO             FileInfo)
 {
-    printf("%s\n", __func__);
+    drs.func = DF_GETFILEINFORMATION;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)HandleFileInfo;
+    drs.argv[2] = (void*)FileInfo;
 
-    if (wcscmp(FileName, L"\\File1") == 0) {
-        HandleFileInfo->nFileSizeLow = FILE_SIZE;
-        HandleFileInfo->dwFileAttributes = 0;
-    } else {
-    }
+    drs.res = 0;
 
-    return 0;
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -122,8 +247,16 @@ int DOKAN_CALLBACK RubyDokan_FindFiles (
 	PFillFindData    FFData,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_FINDFILES;
+    drs.argv[0] = (void*)PathName;
+    drs.argv[1] = (void*)FFData;
+    drs.argv[2] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -135,27 +268,17 @@ int DOKAN_CALLBACK RubyDokan_FindFilesWithPattern (
 	PDOKAN_FILE_INFO FileInfo)
 {
 
-    printf("%s ", __func__);
+    drs.func = DF_FINDFILESWITHPATTERN;
+    drs.argv[0] = (void*)PathName;
+    drs.argv[1] = (void*)SearchPattern;
+    drs.argv[2] = (void*)FFData;
+    drs.argv[3] = (void*)FileInfo;
 
-    wprintf(L"%S - %S\n", PathName, SearchPattern);
+    drs.res = 0;
 
-    {
-        WIN32_FIND_DATAW find_data;
-        find_data.dwFileAttributes = 0;
-        find_data.ftCreationTime.dwLowDateTime = 0;
-        find_data.ftCreationTime.dwHighDateTime = 0;
-        find_data.ftLastAccessTime.dwLowDateTime = 0;
-        find_data.ftLastAccessTime.dwHighDateTime = 0;
-        find_data.ftLastWriteTime.dwLowDateTime = 0;
-        find_data.ftLastWriteTime.dwHighDateTime = 0;
-        find_data.nFileSizeHigh = 0;
-        find_data.nFileSizeLow = 128;
-        wcscpy(find_data.cFileName, L"File1");
-        find_data.cAlternateFileName[0] = '\0';
-        FFData(&find_data, FileInfo);
-    }
+    RubyDokan_DispatchAndWait();
 
-    return 0;
+    return drs.res;
 }
 
 
@@ -164,8 +287,16 @@ int DOKAN_CALLBACK RubyDokan_SetFileAttributes (
 	DWORD            FileAttributes,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_SETFILEATTRIBUTES;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)FileAttributes;
+    drs.argv[2] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -176,8 +307,18 @@ int DOKAN_CALLBACK RubyDokan_SetFileTime (
 	CONST FILETIME*  LastWriteTime,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_SETFILETIME;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)CreationTime;
+    drs.argv[2] = (void*)LastAccessTime;
+    drs.argv[3] = (void*)LastWriteTime;
+    drs.argv[4] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -193,27 +334,50 @@ int DOKAN_CALLBACK RubyDokan_DeleteFile (
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_DELETEFILE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 int DOKAN_CALLBACK RubyDokan_DeleteDirectory ( 
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_DELETEDIRECTORY;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
 int DOKAN_CALLBACK RubyDokan_MoveFile (
 	LPCWSTR          ExistingFileName,
 	LPCWSTR          NewFileName,
-	BOOL             ReplaceExisiting,
+	BOOL             ReplaceExisting,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_MOVEFILE;
+    drs.argv[0] = (void*)ExistingFileName;
+    drs.argv[1] = (void*)NewFileName;
+    drs.argv[2] = (void*)ReplaceExisting;
+    drs.argv[3] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -222,8 +386,16 @@ int DOKAN_CALLBACK RubyDokan_SetEndOfFile (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_SETENDOFFILE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)&Length;
+    drs.argv[2] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -232,30 +404,56 @@ int DOKAN_CALLBACK RubyDokan_SetAllocationSize (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_SETALLOCATIONSIZE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)&Length;
+    drs.argv[2] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
 int DOKAN_CALLBACK RubyDokan_LockFile (
 	LPCWSTR          FileName,
-	LONGLONG         ByteOffset,
+	LONGLONG         BytesOffset,
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_LOCKFILE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)&BytesOffset;
+    drs.argv[2] = (void*)&Length;
+    drs.argv[3] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
 int DOKAN_CALLBACK RubyDokan_UnlockFile (
 	LPCWSTR          FileName,
-	LONGLONG         ByteOffset,
+	LONGLONG         BytesOffset,
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_UNLOCKFILE;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)&BytesOffset;
+    drs.argv[2] = (void*)&Length;
+    drs.argv[3] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -271,8 +469,17 @@ int DOKAN_CALLBACK RubyDokan_GetDiskFreeSpace (
 	PULONGLONG       TotalNumberOfFreeBytes,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_GETDISKFREESPACE;
+    drs.argv[0] = (void*)FreeBytesAvailable;
+    drs.argv[1] = (void*)TotalNumberOfBytes;
+    drs.argv[2] = (void*)TotalNumberOfFreeBytes;
+    drs.argv[3] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -287,16 +494,35 @@ int DOKAN_CALLBACK RubyDokan_GetVolumeInformation (
 	DWORD 	         FileSystemNameSize, // in num of chars
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_GETVOLUMEINFORMATION;
+    drs.argv[0] = (void*)VolumeNameBuffer;
+    drs.argv[1] = (void*)VolumeNameSize;
+    drs.argv[2] = (void*)VolumeSerialNumber;
+    drs.argv[3] = (void*)MaximumComponentLength;
+    drs.argv[4] = (void*)FileSystemFlags;
+    drs.argv[5] = (void*)FileSystemNameBuffer;
+    drs.argv[6] = (void*)FileSystemNameSize;
+    drs.argv[7] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
 int DOKAN_CALLBACK RubyDokan_Unmount (
 	PDOKAN_FILE_INFO FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_UNMOUNT;
+    drs.argv[0] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 
@@ -309,8 +535,19 @@ int DOKAN_CALLBACK RubyDokan_GetFileSecurity (
 	PULONG                LengthNeeded,
 	PDOKAN_FILE_INFO      FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_GETFILESECURITY;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)SecInfo;
+    drs.argv[2] = (void*)SecDesc;
+    drs.argv[3] = (void*)SecDescBufLen;
+    drs.argv[4] = (void*)LengthNeeded;
+    drs.argv[5] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 
 int DOKAN_CALLBACK RubyDokan_SetFileSecurity (
@@ -320,7 +557,17 @@ int DOKAN_CALLBACK RubyDokan_SetFileSecurity (
 	ULONG                 SecDescLen, // SecurityDescriptor length
 	PDOKAN_FILE_INFO      FileInfo)
 {
-    printf("%s\n", __func__);
-    return 0;
+    drs.func = DF_SETFILESECURITY;
+    drs.argv[0] = (void*)FileName;
+    drs.argv[1] = (void*)SecInfo;
+    drs.argv[2] = (void*)SecDesc;
+    drs.argv[3] = (void*)SecDescLen;
+    drs.argv[4] = (void*)FileInfo;
+
+    drs.res = 0;
+
+    RubyDokan_DispatchAndWait();
+
+    return drs.res;
 }
 

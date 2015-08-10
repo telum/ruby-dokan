@@ -1,22 +1,11 @@
 #include <ruby.h>
+#include "libdokan.h"
 #include "dokan.h"
 #include "dokan_ops.h"
-#include "dokan_context.h"
 
 
 VALUE rb_cDokan = Qnil;
 
-
-VALUE rb_dokan_init(VALUE self)
-{
-    rb_iv_set(self, "@mount_point", Qnil);
-    rb_iv_set(self, "@network", Qfalse);
-    rb_iv_set(self, "@removable", Qfalse);
-
-    rb_iv_set(self, "@threads", INT2NUM(1));
-
-    return Qnil;
-}
 
 VALUE rb_dokan_run(VALUE self)
 {
@@ -24,7 +13,7 @@ VALUE rb_dokan_run(VALUE self)
     PDOKAN_OPTIONS dk_opts;
     PDOKAN_OPERATIONS dk_ops;
     ULONG options;
-    ULONG64 context;
+    //ULONG64 context;
     LPWSTR wcs_mp;
     VALUE rb_mp;
     int rb_mp_len;
@@ -52,14 +41,14 @@ VALUE rb_dokan_run(VALUE self)
     if (rb_iv_get(self, "@network") == Qtrue) options |= DOKAN_OPTION_NETWORK;
     if (rb_iv_get(self, "@removable") == Qtrue) options |= DOKAN_OPTION_REMOVABLE;
 
-    context = GetCurrentProcessId();
-    context <<= 32;
-    context |= GetCurrentThreadId();
+    //context = GetCurrentProcessId();
+    //context <<= 32;
+    //context |= GetCurrentThreadId();
 
     dk_opts->Version = DOKAN_VERSION;
     dk_opts->ThreadCount = FIX2INT(rb_iv_get(self, "@threads"));
     dk_opts->Options = options;
-    dk_opts->GlobalContext = context;
+    //dk_opts->GlobalContext = context;// GlobalContext is not used by Dokan driver
     dk_opts->MountPoint = wcs_mp;
 
     dk_ops = ALLOC(DOKAN_OPERATIONS);
@@ -90,15 +79,12 @@ VALUE rb_dokan_run(VALUE self)
     dk_ops->GetFileSecurity      = RubyDokan_GetFileSecurity;
     dk_ops->SetFileSecurity      = RubyDokan_SetFileSecurity;
 
-    dokan_context_register(context, self);
-
     res = DokanMain(dk_opts, dk_ops);
 
     if (res != DOKAN_SUCCESS) {
         xfree(dk_opts);
         xfree(dk_ops);
         xfree(wcs_mp);
-        dokan_context_unregister(context);
 
         return INT2NUM(res);
     }
@@ -170,21 +156,23 @@ void Init_dokan(void)
 {
     rb_cDokan = rb_define_class("Dokan", rb_cObject);
 
-    rb_define_method(rb_cDokan, "initialize", rb_dokan_init, 0);
-    rb_define_method(rb_cDokan, "run", rb_dokan_run, 0);
+    rb_define_singleton_method(rb_cDokan, "run", rb_dokan_run, 0);
 
-    rb_define_method(rb_cDokan, "threads", rb_dokan_threads, 0);
-    rb_define_method(rb_cDokan, "threads=", rb_dokan_threads_set, 1);
+    rb_define_singleton_method(rb_cDokan, "threads", rb_dokan_threads, 0);
+    rb_define_singleton_method(rb_cDokan, "threads=", rb_dokan_threads_set, 1);
 
-    rb_define_method(rb_cDokan, "network?", rb_dokan_is_network, 0);
-    rb_define_method(rb_cDokan, "network=", rb_dokan_is_network_set, 1);
+    rb_define_singleton_method(rb_cDokan, "network?", rb_dokan_is_network, 0);
+    rb_define_singleton_method(rb_cDokan, "network=", rb_dokan_is_network_set, 1);
 
-    rb_define_method(rb_cDokan, "removable?", rb_dokan_is_removable, 0);
-    rb_define_method(rb_cDokan, "removable=", rb_dokan_is_removable_set, 1);
+    rb_define_singleton_method(rb_cDokan, "removable?", rb_dokan_is_removable, 0);
+    rb_define_singleton_method(rb_cDokan, "removable=", rb_dokan_is_removable_set, 1);
 
-    rb_define_method(rb_cDokan, "mount_point", rb_dokan_mount_point, 0);
-    rb_define_method(rb_cDokan, "mount_point=", rb_dokan_mount_point_set, 1);
+    rb_define_singleton_method(rb_cDokan, "mount_point", rb_dokan_mount_point, 0);
+    rb_define_singleton_method(rb_cDokan, "mount_point=", rb_dokan_mount_point_set, 1);
 
-    dokan_context_init();
+    rb_iv_set(rb_cDokan, "@mount_point", Qnil);
+    rb_iv_set(rb_cDokan, "@network", Qfalse);
+    rb_iv_set(rb_cDokan, "@removable", Qfalse);
+    rb_iv_set(rb_cDokan, "@threads", INT2NUM(1));
 }
 

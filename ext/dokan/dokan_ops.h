@@ -2,8 +2,10 @@
 #define DOKAN_OPS_H
 
 
-#include "dokan.h"
+#include "libdokan.h"
 
+
+BOOL RubyDokan_init(void);
 
 int DOKAN_CALLBACK RubyDokan_CreateFile (
 	LPCWSTR          FileName,
