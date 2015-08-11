@@ -2,19 +2,41 @@
 #include "libdokan.h"
 #include "dokan.h"
 #include "dokan_ops.h"
+#include "dokan_dispatcher.h"
 
 
 VALUE rb_cDokan = Qnil;
 
 
-VALUE rb_dokan_run(VALUE self)
+static HANDLE dokanMainThread;
+HANDLE dokanMainStarted;
+static PDOKAN_OPTIONS dk_opts;
+static PDOKAN_OPERATIONS dk_ops;
+static LPWSTR wcs_mp;
+
+
+DWORD WINAPI rb_dokan_main(LPVOID lp)
 {
     int res;
-    PDOKAN_OPTIONS dk_opts;
-    PDOKAN_OPERATIONS dk_ops;
+
+    res = DokanMain(dk_opts, dk_ops);
+
+    if (res != DOKAN_SUCCESS) {
+        xfree(dk_opts);
+        xfree(dk_ops);
+        xfree(wcs_mp);
+
+        return INT2NUM(res);
+    }
+
+    return ERROR_SUCCESS;
+}
+
+
+VALUE rb_dokan_run(VALUE self)
+{
     ULONG options;
     //ULONG64 context;
-    LPWSTR wcs_mp;
     VALUE rb_mp;
     int rb_mp_len;
 
@@ -79,15 +101,20 @@ VALUE rb_dokan_run(VALUE self)
     dk_ops->GetFileSecurity      = RubyDokan_GetFileSecurity;
     dk_ops->SetFileSecurity      = RubyDokan_SetFileSecurity;
 
-    res = DokanMain(dk_opts, dk_ops);
+    dokanMainStarted = CreateEvent(NULL, FALSE, FALSE, "DokanMainEvent");
 
-    if (res != DOKAN_SUCCESS) {
-        xfree(dk_opts);
-        xfree(dk_ops);
-        xfree(wcs_mp);
+    dokanMainThread = CreateThread (
+        NULL,
+        0,
+        (LPTHREAD_START_ROUTINE)rb_dokan_main,
+        NULL,
+        0,
+        NULL
+    );
 
-        return INT2NUM(res);
-    }
+    WaitForSingleObject(dokanMainStarted, INFINITE);
+
+    dokan_dispatcher_thread();
 
     return Qnil;
 }
@@ -174,5 +201,9 @@ void Init_dokan(void)
     rb_iv_set(rb_cDokan, "@network", Qfalse);
     rb_iv_set(rb_cDokan, "@removable", Qfalse);
     rb_iv_set(rb_cDokan, "@threads", INT2NUM(1));
+
+    RubyDokan_init();
+
+    dokan_dispatcher_init();
 }
 

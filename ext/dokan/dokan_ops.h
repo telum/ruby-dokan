@@ -5,6 +5,51 @@
 #include "libdokan.h"
 
 
+#define SB_ARGS_MAX_COUNT 8
+
+
+typedef enum {
+  DF_NOP,
+  DF_CREATEFILE,
+  DF_OPENDIRECTORY,
+  DF_CREATEDIRECTORY,
+  DF_CLEANUP,
+  DF_CLOSEFILE,
+  DF_READFILE,
+  DF_WRITEFILE,
+  DF_FLUSHFILEBUFFERS,
+  DF_GETFILEINFORMATION,
+  DF_FINDFILES,
+  DF_FINDFILESWITHPATTERN,
+  DF_SETFILEATTRIBUTES,
+  DF_SETFILETIME,
+  DF_DELETEFILE,
+  DF_DELETEDIRECTORY,
+  DF_MOVEFILE,
+  DF_SETENDOFFILE,
+  DF_SETALLOCATIONSIZE,
+  DF_LOCKFILE,
+  DF_UNLOCKFILE,
+  DF_GETDISKFREESPACE,
+  DF_GETVOLUMEINFORMATION,
+  DF_UNMOUNT,
+  DF_GETFILESECURITY,
+  DF_SETFILESECURITY
+} DokanFunc;
+
+
+typedef struct
+{
+  DokanFunc func;
+  void* argv[SB_ARGS_MAX_COUNT];
+  int res;
+  HANDLE dispatchEvent;
+  HANDLE dispatchedEvent;
+} DokanRubySandbox;
+
+extern DokanRubySandbox drs;
+
+
 BOOL RubyDokan_init(void);
 
 int DOKAN_CALLBACK RubyDokan_CreateFile (

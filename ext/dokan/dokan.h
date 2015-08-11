@@ -4,6 +4,7 @@
 #include "ruby.h"
 
 extern VALUE rb_cDokan;
+extern HANDLE dokanMainStarted;
 
 
 #endif
