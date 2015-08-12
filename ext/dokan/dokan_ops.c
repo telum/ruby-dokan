@@ -6,15 +6,16 @@
 
 DokanRubySandbox drs;
 
-BOOL RubyDokan_init(void)
+
+BOOL RubyDokan_Init(void)
 {
-    drs.dispatchEvent = CreateEvent(NULL, FALSE, FALSE, "DokanDispatchEvent");
+    drs.dispatchEvent = CreateEvent(NULL, FALSE, FALSE, "DokanSB_DispatchEvent");
 
     if (drs.dispatchEvent == NULL) {
         return FALSE;
     }
 
-    drs.dispatchedEvent = CreateEvent(NULL, FALSE, FALSE, "DokanDispatchedEvent");
+    drs.dispatchedEvent = CreateEvent(NULL, FALSE, FALSE, "DokanSB_DispatchedEvent");
 
     if (drs.dispatchedEvent == NULL) {
         return FALSE;
@@ -30,12 +31,6 @@ static void RubyDokan_DispatchAndWait(void)
     WaitForSingleObject(drs.dispatchedEvent, INFINITE);
 }
 
-void RubyDokan_TouchEvent(void)
-{
-    if (WaitForSingleObject(dokanMainStarted, 0) != WAIT_OBJECT_0) {
-        SetEvent(dokanMainStarted);
-    }
-}
 
 int DOKAN_CALLBACK RubyDokan_CreateFile (
 	LPCWSTR          FileName,
@@ -45,7 +40,7 @@ int DOKAN_CALLBACK RubyDokan_CreateFile (
 	DWORD            FlagsAndAttributes,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_CREATEFILE;
     drs.argv[0] = (void*)FileName;
@@ -66,7 +61,7 @@ int DOKAN_CALLBACK RubyDokan_OpenDirectory (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_OPENDIRECTORY;
     drs.argv[0] = (void*)FileName;
@@ -83,7 +78,7 @@ int DOKAN_CALLBACK RubyDokan_CreateDirectory (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_CREATEDIRECTORY;
     drs.argv[0] = (void*)FileName;
@@ -101,7 +96,7 @@ int DOKAN_CALLBACK RubyDokan_Cleanup (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_CLEANUP;
     drs.argv[0] = (void*)FileName;
@@ -118,7 +113,7 @@ int DOKAN_CALLBACK RubyDokan_CloseFile (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_CLOSEFILE;
     drs.argv[0] = (void*)FileName;
@@ -139,7 +134,7 @@ int DOKAN_CALLBACK RubyDokan_ReadFile (
 	LONGLONG         Offset,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_READFILE;
     drs.argv[0] = (void*)FileName;
@@ -165,7 +160,7 @@ int DOKAN_CALLBACK RubyDokan_WriteFile (
 	LONGLONG         Offset,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_WRITEFILE;
     drs.argv[0] = (void*)FileName;
@@ -187,7 +182,7 @@ int DOKAN_CALLBACK RubyDokan_FlushFileBuffers (
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_FLUSHFILEBUFFERS;
     drs.argv[0] = (void*)FileName;
@@ -206,7 +201,7 @@ int DOKAN_CALLBACK RubyDokan_GetFileInformation (
 	LPBY_HANDLE_FILE_INFORMATION HandleFileInfo,
 	PDOKAN_FILE_INFO             FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_GETFILEINFORMATION;
     drs.argv[0] = (void*)FileName;
@@ -226,7 +221,7 @@ int DOKAN_CALLBACK RubyDokan_FindFiles (
 	PFillFindData    FFData,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_FINDFILES;
     drs.argv[0] = (void*)PathName;
@@ -248,7 +243,7 @@ int DOKAN_CALLBACK RubyDokan_FindFilesWithPattern (
 	PFillFindData    FFData,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_FINDFILESWITHPATTERN;
     drs.argv[0] = (void*)PathName;
@@ -269,7 +264,7 @@ int DOKAN_CALLBACK RubyDokan_SetFileAttributes (
 	DWORD            FileAttributes,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_SETFILEATTRIBUTES;
     drs.argv[0] = (void*)FileName;
@@ -290,7 +285,7 @@ int DOKAN_CALLBACK RubyDokan_SetFileTime (
 	CONST FILETIME*  LastWriteTime,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_SETFILETIME;
     drs.argv[0] = (void*)FileName;
@@ -319,7 +314,7 @@ int DOKAN_CALLBACK RubyDokan_DeleteFile (
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_DELETEFILE;
     drs.argv[0] = (void*)FileName;
@@ -336,7 +331,7 @@ int DOKAN_CALLBACK RubyDokan_DeleteDirectory (
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_DELETEDIRECTORY;
     drs.argv[0] = (void*)FileName;
@@ -356,7 +351,7 @@ int DOKAN_CALLBACK RubyDokan_MoveFile (
 	BOOL             ReplaceExisting,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_MOVEFILE;
     drs.argv[0] = (void*)ExistingFileName;
@@ -377,7 +372,7 @@ int DOKAN_CALLBACK RubyDokan_SetEndOfFile (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_SETENDOFFILE;
     drs.argv[0] = (void*)FileName;
@@ -397,7 +392,7 @@ int DOKAN_CALLBACK RubyDokan_SetAllocationSize (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_SETALLOCATIONSIZE;
     drs.argv[0] = (void*)FileName;
@@ -418,7 +413,7 @@ int DOKAN_CALLBACK RubyDokan_LockFile (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_LOCKFILE;
     drs.argv[0] = (void*)FileName;
@@ -440,7 +435,7 @@ int DOKAN_CALLBACK RubyDokan_UnlockFile (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_UNLOCKFILE;
     drs.argv[0] = (void*)FileName;
@@ -468,7 +463,7 @@ int DOKAN_CALLBACK RubyDokan_GetDiskFreeSpace (
 	PULONGLONG       TotalNumberOfFreeBytes,
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_GETDISKFREESPACE;
     drs.argv[0] = (void*)FreeBytesAvailable;
@@ -495,7 +490,7 @@ int DOKAN_CALLBACK RubyDokan_GetVolumeInformation (
 	DWORD 	         FileSystemNameSize, // in num of chars
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_GETVOLUMEINFORMATION;
     drs.argv[0] = (void*)VolumeNameBuffer;
@@ -518,7 +513,7 @@ int DOKAN_CALLBACK RubyDokan_GetVolumeInformation (
 int DOKAN_CALLBACK RubyDokan_Unmount (
 	PDOKAN_FILE_INFO FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_UNMOUNT;
     drs.argv[0] = (void*)FileInfo;
@@ -540,7 +535,7 @@ int DOKAN_CALLBACK RubyDokan_GetFileSecurity (
 	PULONG                LengthNeeded,
 	PDOKAN_FILE_INFO      FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_GETFILESECURITY;
     drs.argv[0] = (void*)FileName;
@@ -564,7 +559,7 @@ int DOKAN_CALLBACK RubyDokan_SetFileSecurity (
 	ULONG                 SecDescLen, // SecurityDescriptor length
 	PDOKAN_FILE_INFO      FileInfo)
 {
-    RubyDokan_TouchEvent();
+    dokan_thread_started();
 
     drs.func = DF_SETFILESECURITY;
     drs.argv[0] = (void*)FileName;

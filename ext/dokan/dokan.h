@@ -4,8 +4,8 @@
 #include "ruby.h"
 
 extern VALUE rb_cDokan;
-extern HANDLE dokanMainStarted;
 
+void dokan_thread_started(void)
 
 #endif
 
