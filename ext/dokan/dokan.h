@@ -5,7 +5,7 @@
 
 extern VALUE rb_cDokan;
 
-void dokan_thread_started(void)
+void dokan_thread_started(void);
 
 #endif
 

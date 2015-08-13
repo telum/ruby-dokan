@@ -31,6 +31,22 @@ static void RubyDokan_DispatchAndWait(void)
     WaitForSingleObject(drs.dispatchedEvent, INFINITE);
 }
 
+HANDLE hBarrier;
+
+void win32_callback_barrier_init(void)
+{
+    hBarrier = CreateMutex(NULL, FALSE, "Win32_Callback_Barrier");
+}
+
+void win32_callback_barrier_start(void)
+{
+    WaitForSingleObject(hBarrier, INFINITE);
+}
+
+void win32_callback_barrier_stop(void)
+{
+    ReleaseMutex(hBarrier);
+}
 
 int DOKAN_CALLBACK RubyDokan_CreateFile (
 	LPCWSTR          FileName,
@@ -40,6 +56,9 @@ int DOKAN_CALLBACK RubyDokan_CreateFile (
 	DWORD            FlagsAndAttributes,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_CREATEFILE;
@@ -54,6 +73,10 @@ int DOKAN_CALLBACK RubyDokan_CreateFile (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -61,6 +84,9 @@ int DOKAN_CALLBACK RubyDokan_OpenDirectory (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_OPENDIRECTORY;
@@ -78,6 +104,9 @@ int DOKAN_CALLBACK RubyDokan_CreateDirectory (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_CREATEDIRECTORY;
@@ -88,6 +117,10 @@ int DOKAN_CALLBACK RubyDokan_CreateDirectory (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -96,6 +129,9 @@ int DOKAN_CALLBACK RubyDokan_Cleanup (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_CLEANUP;
@@ -106,6 +142,10 @@ int DOKAN_CALLBACK RubyDokan_Cleanup (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -113,6 +153,9 @@ int DOKAN_CALLBACK RubyDokan_CloseFile (
 	LPCWSTR FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_CLOSEFILE;
@@ -122,6 +165,10 @@ int DOKAN_CALLBACK RubyDokan_CloseFile (
     drs.res = 0;
 
     RubyDokan_DispatchAndWait();
+
+    res = drs.res;
+
+    win32_callback_barrier_start();
 
     return drs.res;
 }
@@ -134,6 +181,9 @@ int DOKAN_CALLBACK RubyDokan_ReadFile (
 	LONGLONG         Offset,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_READFILE;
@@ -148,6 +198,10 @@ int DOKAN_CALLBACK RubyDokan_ReadFile (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -160,6 +214,9 @@ int DOKAN_CALLBACK RubyDokan_WriteFile (
 	LONGLONG         Offset,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_WRITEFILE;
@@ -174,6 +231,10 @@ int DOKAN_CALLBACK RubyDokan_WriteFile (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -182,6 +243,9 @@ int DOKAN_CALLBACK RubyDokan_FlushFileBuffers (
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_FLUSHFILEBUFFERS;
@@ -192,6 +256,10 @@ int DOKAN_CALLBACK RubyDokan_FlushFileBuffers (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -201,6 +269,9 @@ int DOKAN_CALLBACK RubyDokan_GetFileInformation (
 	LPBY_HANDLE_FILE_INFORMATION HandleFileInfo,
 	PDOKAN_FILE_INFO             FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_GETFILEINFORMATION;
@@ -212,6 +283,10 @@ int DOKAN_CALLBACK RubyDokan_GetFileInformation (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -221,6 +296,9 @@ int DOKAN_CALLBACK RubyDokan_FindFiles (
 	PFillFindData    FFData,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_FINDFILES;
@@ -231,6 +309,10 @@ int DOKAN_CALLBACK RubyDokan_FindFiles (
     drs.res = 0;
 
     RubyDokan_DispatchAndWait();
+
+    res = drs.res;
+
+    win32_callback_barrier_start();
 
     return drs.res;
 }
@@ -243,7 +325,10 @@ int DOKAN_CALLBACK RubyDokan_FindFilesWithPattern (
 	PFillFindData    FFData,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
     dokan_thread_started();
+    win32_callback_barrier_start();
 
     drs.func = DF_FINDFILESWITHPATTERN;
     drs.argv[0] = (void*)PathName;
@@ -255,6 +340,10 @@ int DOKAN_CALLBACK RubyDokan_FindFilesWithPattern (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -264,6 +353,9 @@ int DOKAN_CALLBACK RubyDokan_SetFileAttributes (
 	DWORD            FileAttributes,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_SETFILEATTRIBUTES;
@@ -275,6 +367,10 @@ int DOKAN_CALLBACK RubyDokan_SetFileAttributes (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -285,6 +381,9 @@ int DOKAN_CALLBACK RubyDokan_SetFileTime (
 	CONST FILETIME*  LastWriteTime,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_SETFILETIME;
@@ -297,6 +396,10 @@ int DOKAN_CALLBACK RubyDokan_SetFileTime (
     drs.res = 0;
 
     RubyDokan_DispatchAndWait();
+
+    res = drs.res;
+
+    win32_callback_barrier_start();
 
     return drs.res;
 }
@@ -314,6 +417,9 @@ int DOKAN_CALLBACK RubyDokan_DeleteFile (
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_DELETEFILE;
@@ -324,6 +430,10 @@ int DOKAN_CALLBACK RubyDokan_DeleteFile (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -331,6 +441,9 @@ int DOKAN_CALLBACK RubyDokan_DeleteDirectory (
 	LPCWSTR          FileName,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_DELETEDIRECTORY;
@@ -340,6 +453,10 @@ int DOKAN_CALLBACK RubyDokan_DeleteDirectory (
     drs.res = 0;
 
     RubyDokan_DispatchAndWait();
+
+    res = drs.res;
+
+    win32_callback_barrier_start();
 
     return drs.res;
 }
@@ -351,6 +468,9 @@ int DOKAN_CALLBACK RubyDokan_MoveFile (
 	BOOL             ReplaceExisting,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_MOVEFILE;
@@ -363,6 +483,10 @@ int DOKAN_CALLBACK RubyDokan_MoveFile (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -372,6 +496,9 @@ int DOKAN_CALLBACK RubyDokan_SetEndOfFile (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_SETENDOFFILE;
@@ -383,6 +510,10 @@ int DOKAN_CALLBACK RubyDokan_SetEndOfFile (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -392,6 +523,9 @@ int DOKAN_CALLBACK RubyDokan_SetAllocationSize (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_SETALLOCATIONSIZE;
@@ -403,6 +537,10 @@ int DOKAN_CALLBACK RubyDokan_SetAllocationSize (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -413,6 +551,9 @@ int DOKAN_CALLBACK RubyDokan_LockFile (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_LOCKFILE;
@@ -425,6 +566,10 @@ int DOKAN_CALLBACK RubyDokan_LockFile (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -435,6 +580,9 @@ int DOKAN_CALLBACK RubyDokan_UnlockFile (
 	LONGLONG         Length,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_UNLOCKFILE;
@@ -446,6 +594,10 @@ int DOKAN_CALLBACK RubyDokan_UnlockFile (
     drs.res = 0;
 
     RubyDokan_DispatchAndWait();
+
+    res = drs.res;
+
+    win32_callback_barrier_start();
 
     return drs.res;
 }
@@ -463,6 +615,9 @@ int DOKAN_CALLBACK RubyDokan_GetDiskFreeSpace (
 	PULONGLONG       TotalNumberOfFreeBytes,
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_GETDISKFREESPACE;
@@ -474,6 +629,10 @@ int DOKAN_CALLBACK RubyDokan_GetDiskFreeSpace (
     drs.res = 0;
 
     RubyDokan_DispatchAndWait();
+
+    res = drs.res;
+
+    win32_callback_barrier_start();
 
     return drs.res;
 }
@@ -490,6 +649,9 @@ int DOKAN_CALLBACK RubyDokan_GetVolumeInformation (
 	DWORD 	         FileSystemNameSize, // in num of chars
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_GETVOLUMEINFORMATION;
@@ -506,6 +668,10 @@ int DOKAN_CALLBACK RubyDokan_GetVolumeInformation (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -513,6 +679,9 @@ int DOKAN_CALLBACK RubyDokan_GetVolumeInformation (
 int DOKAN_CALLBACK RubyDokan_Unmount (
 	PDOKAN_FILE_INFO FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_UNMOUNT;
@@ -521,6 +690,10 @@ int DOKAN_CALLBACK RubyDokan_Unmount (
     drs.res = 0;
 
     RubyDokan_DispatchAndWait();
+
+    res = drs.res;
+
+    win32_callback_barrier_start();
 
     return drs.res;
 }
@@ -535,6 +708,9 @@ int DOKAN_CALLBACK RubyDokan_GetFileSecurity (
 	PULONG                LengthNeeded,
 	PDOKAN_FILE_INFO      FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_GETFILESECURITY;
@@ -549,6 +725,10 @@ int DOKAN_CALLBACK RubyDokan_GetFileSecurity (
 
     RubyDokan_DispatchAndWait();
 
+    res = drs.res;
+
+    win32_callback_barrier_start();
+
     return drs.res;
 }
 
@@ -559,6 +739,9 @@ int DOKAN_CALLBACK RubyDokan_SetFileSecurity (
 	ULONG                 SecDescLen, // SecurityDescriptor length
 	PDOKAN_FILE_INFO      FileInfo)
 {
+    int res;
+
+    win32_callback_barrier_start();
     dokan_thread_started();
 
     drs.func = DF_SETFILESECURITY;
@@ -571,6 +754,10 @@ int DOKAN_CALLBACK RubyDokan_SetFileSecurity (
     drs.res = 0;
 
     RubyDokan_DispatchAndWait();
+
+    res = drs.res;
+
+    win32_callback_barrier_start();
 
     return drs.res;
 }

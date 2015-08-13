@@ -50,7 +50,7 @@ typedef struct
 extern DokanRubySandbox drs;
 
 
-BOOL RubyDokan_init(void);
+BOOL RubyDokan_Init(void);
 
 int DOKAN_CALLBACK RubyDokan_CreateFile (
 	LPCWSTR          FileName,

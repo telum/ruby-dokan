@@ -2,6 +2,7 @@
 #include "libdokan.h"
 #include "dokan.h"
 #include "dokan_ops.h"
+#include "dokan_aux.h"
 #include "dokan_dispatcher.h"
 
 
@@ -16,12 +17,15 @@ struct _Dokan
     DOKAN_OPERATIONS ops;
 } dokan;
 
+void dokan_clean(void);
 
 DWORD WINAPI th_dokan_mainloop(LPVOID lp)
 {
     int res;
 
-    res = DokanMain(dk_opts, dk_ops);
+    win32_callback_barrier_init();
+
+    res = DokanMain(&dokan.opts, &dokan.ops);
 
     if (res != DOKAN_SUCCESS) {
         dokan_clean();
@@ -47,6 +51,8 @@ VALUE rb_dokan_mount(VALUE self, VALUE mount_point, VALUE dirObj, VALUE fileObj)
     PDOKAN_OPTIONS opts;
     PDOKAN_OPERATIONS ops;
 
+    rb_require("pathname");
+
     opts = &dokan.opts;
     ops = &dokan.ops;
 
@@ -56,7 +62,7 @@ VALUE rb_dokan_mount(VALUE self, VALUE mount_point, VALUE dirObj, VALUE fileObj)
     opts->ThreadCount = 0;  // TODO: parametrize this
     opts->Options = options;
     opts->GlobalContext = 0;  // TODO: fix context work in Dokan driver
-    opts->MountPoint = rb_str_2wcs(mount_point);
+    opts->MountPoint = str2wcs(mount_point);
 
 
     ops->CreateFile           = RubyDokan_CreateFile;
@@ -107,7 +113,7 @@ VALUE rb_dokan_mount(VALUE self, VALUE mount_point, VALUE dirObj, VALUE fileObj)
 void dokan_clean(void)
 {
     if (dokan.opts.MountPoint)
-        rb_wcs_free(dokan.opts.MountPoint);
+        wcs_free((LPWSTR)dokan.opts.MountPoint);
 }
 
 void Init_dokan(void)
