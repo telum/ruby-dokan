@@ -7,6 +7,8 @@
 
 
 VALUE rb_cDokan = Qnil;
+VALUE rb_cDirObj = Qnil;
+VALUE rb_cFileObj = Qnil;
 
 
 struct _Dokan
@@ -52,6 +54,9 @@ VALUE rb_dokan_mount(VALUE self, VALUE mount_point, VALUE dirObj, VALUE fileObj)
     PDOKAN_OPERATIONS ops;
 
     rb_require("pathname");
+
+    rb_cDirObj = dirObj;
+    rb_cFileObj = fileObj;
 
     opts = &dokan.opts;
     ops = &dokan.ops;
